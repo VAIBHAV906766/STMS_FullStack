@@ -1,5 +1,21 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { roleHomePath, useAuth } from '../context/AuthContext';
+
+const linkMap = {
+  CUSTOMER: [
+    { to: '/customer/dashboard', label: 'Dashboard' },
+    { to: '/customer/bookings/new', label: 'Create Booking' },
+    { to: '/customer/invoices', label: 'Invoices' }
+  ],
+  OWNER: [
+    { to: '/owner/dashboard', label: 'Dashboard' },
+    { to: '/owner/pending-bookings', label: 'Pending' },
+    { to: '/owner/invoices', label: 'Invoices' }
+  ],
+  DRIVER: [{ to: '/driver/dashboard', label: 'Dashboard' }]
+};
+
+const formatRole = (role) => `${role.slice(0, 1)}${role.slice(1).toLowerCase()}`;
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -15,19 +31,35 @@ const Navbar = () => {
   };
 
   const role = user.role;
+  const links = linkMap[role] || [];
 
   return (
     <header className="navbar">
       <div className="navbar-content container">
-        <Link to={roleHomePath(role)} className="brand">
-          STMS
-        </Link>
+        <NavLink to={roleHomePath(role)} className="brand">
+          <span className="brand-mark">ST</span>
+          <span className="brand-copy">
+            <small>Smart Transport</small>
+            <strong>Management System</strong>
+          </span>
+        </NavLink>
 
         <nav className="nav-links">
-          {role === 'CUSTOMER' && <Link to="/customer/bookings/new">Create Booking</Link>}
-          {role === 'CUSTOMER' && <Link to="/customer/invoices">My Invoices</Link>}
-          {role === 'OWNER' && <Link to="/owner/pending-bookings">Pending Bookings</Link>}
-          {role === 'OWNER' && <Link to="/owner/invoices">Invoices</Link>}
+          {links.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+            >
+              {link.label}
+            </NavLink>
+          ))}
+
+          <div className="nav-meta">
+            <span className="role-chip">{formatRole(role)}</span>
+            <span className="identity-chip">{user.name}</span>
+          </div>
+
           <button className="button ghost" onClick={handleLogout}>
             Logout
           </button>

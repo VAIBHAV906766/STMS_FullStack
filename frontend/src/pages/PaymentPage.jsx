@@ -1,9 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { getMyInvoices } from '../api/invoiceApi';
 import { payInvoice } from '../api/paymentApi';
+import PageHero from '../components/PageHero';
 
 const PAYMENT_MODES = ['UPI', 'CARD', 'NET_BANKING', 'CASH'];
+const formatCurrency = (amount) =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 2
+  }).format(Number(amount || 0));
 
 const PaymentPage = () => {
   const { invoiceId } = useParams();
@@ -57,7 +64,11 @@ const PaymentPage = () => {
   };
 
   if (loading) {
-    return <p>Loading payment details...</p>;
+    return (
+      <div className="card state-card">
+        <p>Loading payment details...</p>
+      </div>
+    );
   }
 
   if (!invoice) {
@@ -65,16 +76,41 @@ const PaymentPage = () => {
   }
 
   return (
-    <section>
-      <div className="page-header">
-        <h1>Pay Invoice #{invoice.id}</h1>
-      </div>
+    <section className="page-stack">
+      <PageHero
+        eyebrow="Payment Gateway"
+        title={`Pay invoice #${invoice.id}`}
+        description="Review the amount due, select a payment mode, and complete the simulated payment flow."
+        actions={
+          <Link to="/customer/invoices" className="button secondary">
+            Back to Invoices
+          </Link>
+        }
+        stats={[
+          { label: 'Amount Due', value: formatCurrency(invoice.totalAmount), helper: 'Current invoice total' },
+          { label: 'Status', value: invoice.status, helper: 'Payment state of this invoice' }
+        ]}
+      />
 
       <div className="card form-card narrow">
-        <p>
-          Total Amount: <strong>Rs. {Number(invoice.totalAmount).toFixed(2)}</strong>
-        </p>
-        <p className="muted">Status: {invoice.status}</p>
+        <div className="section-header">
+          <div>
+            <span className="eyebrow">Billing Summary</span>
+            <h2>Invoice payment details</h2>
+            <p className="muted">Choose a payment mode to simulate invoice settlement.</p>
+          </div>
+        </div>
+
+        <div className="summary-grid">
+          <article className="summary-tile">
+            <span>Total Amount</span>
+            <strong>{formatCurrency(invoice.totalAmount)}</strong>
+          </article>
+          <article className="summary-tile">
+            <span>Status</span>
+            <strong>{invoice.status}</strong>
+          </article>
+        </div>
 
         {invoice.status === 'PAID' ? (
           <p className="success-text">This invoice is already paid.</p>

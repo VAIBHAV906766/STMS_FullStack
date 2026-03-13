@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import PageHero from '../components/PageHero';
 import StatusBadge from '../components/StatusBadge';
 import { useAuth } from '../context/AuthContext';
 import { getApprovedUninvoicedBookings } from '../api/bookingApi';
@@ -22,6 +23,8 @@ const InvoicePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const paidCount = invoices.filter((invoice) => invoice.status === 'PAID').length;
+  const pendingCount = invoices.filter((invoice) => invoice.status === 'PENDING').length;
 
   const fetchInvoices = async () => {
     try {
@@ -77,21 +80,53 @@ const InvoicePage = () => {
   };
 
   if (loading) {
-    return <p>Loading invoices...</p>;
+    return (
+      <div className="card state-card">
+        <p>Loading invoices...</p>
+      </div>
+    );
   }
 
   return (
-    <section>
-      <div className="page-header">
-        <h1>{isCustomer ? 'My Invoices' : 'Invoice Management'}</h1>
-      </div>
+    <section className="page-stack">
+      <PageHero
+        eyebrow={isCustomer ? 'Customer Billing' : 'Invoice Control'}
+        title={isCustomer ? 'My invoices' : 'Invoice management'}
+        description={
+          isCustomer
+            ? 'Track pending bills, review totals, and move straight into payment when an invoice is ready.'
+            : 'Generate invoices for approved bookings and monitor the payment state across every issued record.'
+        }
+        actions={
+          isCustomer ? (
+            <Link to="/customer/dashboard" className="button secondary">
+              Back to Dashboard
+            </Link>
+          ) : (
+            <Link to="/owner/pending-bookings" className="button secondary">
+              Review Pending Bookings
+            </Link>
+          )
+        }
+        stats={[
+          { label: 'Invoices', value: invoices.length, helper: 'Total invoice records available' },
+          { label: 'Pending', value: pendingCount, helper: 'Invoices awaiting payment' },
+          { label: 'Paid', value: paidCount, helper: 'Invoices already settled' }
+        ]}
+      />
 
       {error ? <p className="error-text">{error}</p> : null}
       {success ? <p className="success-text">{success}</p> : null}
 
       {!isCustomer && (
         <div className="card">
-          <h2>Generate Invoice (Approved Bookings)</h2>
+          <div className="section-header">
+            <div>
+              <span className="eyebrow">Invoice Generator</span>
+              <h2>Generate invoice from approved booking</h2>
+              <p className="muted">Set the rate per kilometer and create a billing record for any approved request.</p>
+            </div>
+          </div>
           {bookingsToInvoice.length === 0 ? (
             <p className="muted">No approved bookings waiting for invoice.</p>
           ) : (
@@ -102,9 +137,13 @@ const InvoicePage = () => {
                     <h3>
                       Booking #{booking.id}: {booking.pickupLocation} to {booking.dropLocation}
                     </h3>
-                    <span className="muted">{booking.distanceKm} km</span>
+                    <span className="detail-chip">{booking.distanceKm} km</span>
                   </div>
-                  <p className="muted">Customer: {booking.customer?.name || 'Unknown'}</p>
+                  <div className="detail-row">
+                    <span className="detail-chip">
+                      Customer: {booking.customer?.name || 'Unknown'}
+                    </span>
+                  </div>
 
                   <div className="inline-form">
                     <label>
@@ -130,7 +169,17 @@ const InvoicePage = () => {
       )}
 
       <div className="card">
-        <h2>{isCustomer ? 'Invoice History' : 'All Invoices'}</h2>
+        <div className="section-header">
+          <div>
+            <span className="eyebrow">{isCustomer ? 'History' : 'Finance Ledger'}</span>
+            <h2>{isCustomer ? 'Invoice history' : 'All invoices'}</h2>
+            <p className="muted">
+              {isCustomer
+                ? 'Review billed distance, rate, total amount, and payment state.'
+                : 'Monitor invoice totals and see which records have already been paid.'}
+            </p>
+          </div>
+        </div>
 
         {invoices.length === 0 ? (
           <p className="muted">No invoices found.</p>
@@ -145,15 +194,18 @@ const InvoicePage = () => {
                   <StatusBadge status={invoice.status} />
                 </div>
 
-                <p className="muted">
-                  Distance: {invoice.distanceKm} km | Rate: {formatCurrency(invoice.ratePerKm)} / km
-                </p>
-                <p className="muted">Total: {formatCurrency(invoice.totalAmount)}</p>
+                <div className="detail-row">
+                  <span className="detail-chip">{invoice.distanceKm} km</span>
+                  <span className="detail-chip">{formatCurrency(invoice.ratePerKm)} / km</span>
+                  <span className="detail-chip">{formatCurrency(invoice.totalAmount)}</span>
+                </div>
 
                 {!isCustomer ? (
-                  <p className="muted">
-                    Customer: {invoice.customer?.name || invoice.booking?.customer?.name || 'Unknown'}
-                  </p>
+                  <div className="detail-row">
+                    <span className="detail-chip">
+                      Customer: {invoice.customer?.name || invoice.booking?.customer?.name || 'Unknown'}
+                    </span>
+                  </div>
                 ) : null}
 
                 {isCustomer && invoice.status === 'PENDING' ? (

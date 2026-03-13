@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { registerUser } from '../api/authApi';
+import AuthShell from '../components/AuthShell';
 import { roleHomePath, useAuth } from '../context/AuthContext';
 
 const SignupPage = () => {
@@ -42,10 +43,15 @@ const SignupPage = () => {
   };
 
   return (
-    <div className="auth-card card">
-      <h1>Signup</h1>
-      <p>Create your STMS account.</p>
-
+    <AuthShell
+      title="Create account"
+      description="Choose a role, enter your details, and jump straight into the STMS workflow."
+      footer={
+        <p className="muted">
+          Already have an account? <Link to="/login">Login</Link>
+        </p>
+      }
+    >
       <form onSubmit={handleSubmit} className="form-grid">
         <label>
           Full Name
@@ -99,11 +105,7 @@ const SignupPage = () => {
           {loading ? 'Creating account...' : 'Signup'}
         </button>
       </form>
-
-      <p className="muted">
-        Already have an account? <Link to="/login">Login</Link>
-      </p>
-    </div>
+    </AuthShell>
   );
 };
 

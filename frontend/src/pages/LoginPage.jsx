@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { loginUser } from '../api/authApi';
+import AuthShell from '../components/AuthShell';
 import { roleHomePath, useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
@@ -37,10 +38,15 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="auth-card card">
-      <h1>Login</h1>
-      <p>Sign in to continue to STMS.</p>
-
+    <AuthShell
+      title="Sign in"
+      description="Return to your control panel and continue managing bookings, invoices, and dispatch updates."
+      footer={
+        <p className="muted">
+          New user? <Link to="/signup">Create an account</Link>
+        </p>
+      }
+    >
       <form onSubmit={handleSubmit} className="form-grid">
         <label>
           Email
@@ -72,11 +78,7 @@ const LoginPage = () => {
           {loading ? 'Logging in...' : 'Login'}
         </button>
       </form>
-
-      <p className="muted">
-        New user? <Link to="/signup">Create an account</Link>
-      </p>
-    </div>
+    </AuthShell>
   );
 };
 

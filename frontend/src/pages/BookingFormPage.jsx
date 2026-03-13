@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createBooking } from '../api/bookingApi';
+import PageHero from '../components/PageHero';
 
 const initialForm = {
   pickupLocation: '',
@@ -48,12 +49,31 @@ const BookingFormPage = () => {
   };
 
   return (
-    <section>
-      <div className="page-header">
-        <h1>Create Booking</h1>
-      </div>
+    <section className="page-stack">
+      <PageHero
+        eyebrow="Booking Intake"
+        title="Create a new booking"
+        description="Submit route, goods, vehicle, and distance details. Once created, the request moves to the owner approval queue."
+        actions={
+          <Link to="/customer/dashboard" className="button secondary">
+            Back to Dashboard
+          </Link>
+        }
+        stats={[
+          { label: 'Flow', value: 'Request -> Review', helper: 'Bookings enter the approval queue immediately' },
+          { label: 'Output', value: 'Invoice Ready', helper: 'Approved trips become invoice candidates' }
+        ]}
+      />
 
       <div className="card form-card">
+        <div className="section-header">
+          <div>
+            <span className="eyebrow">Route Details</span>
+            <h2>Shipment request form</h2>
+            <p className="muted">Add clear route and cargo details so the approval and assignment step stays fast.</p>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit} className="form-grid two-col">
           <label>
             Pickup Location
@@ -121,9 +141,14 @@ const BookingFormPage = () => {
           {success ? <p className="success-text full-width">{success}</p> : null}
 
           <div className="full-width">
-            <button type="submit" className="button" disabled={loading}>
-              {loading ? 'Submitting...' : 'Submit Booking'}
-            </button>
+            <div className="button-row">
+              <button type="submit" className="button" disabled={loading}>
+                {loading ? 'Submitting...' : 'Submit Booking'}
+              </button>
+              <Link to="/customer/dashboard" className="button secondary">
+                Cancel
+              </Link>
+            </div>
           </div>
         </form>
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import PageHero from '../components/PageHero';
 import StatusBadge from '../components/StatusBadge';
 import { getPendingBookings, updateBookingStatus } from '../api/bookingApi';
 import { getDrivers } from '../api/userApi';
@@ -59,19 +60,37 @@ const PendingBookingsPage = () => {
   };
 
   if (loading) {
-    return <p>Loading pending bookings...</p>;
+    return (
+      <div className="card state-card">
+        <p>Loading pending bookings...</p>
+      </div>
+    );
   }
 
   return (
-    <section>
-      <div className="page-header">
-        <h1>Pending Bookings</h1>
-      </div>
+    <section className="page-stack">
+      <PageHero
+        eyebrow="Approval Queue"
+        title="Pending booking review"
+        description="Approve or reject incoming booking requests, assign drivers manually when needed, or let the system auto-assign for speed."
+        stats={[
+          { label: 'Pending', value: bookings.length, helper: 'Bookings waiting for a decision' },
+          { label: 'Drivers', value: drivers.length, helper: 'Available accounts for assignment' }
+        ]}
+      />
 
       {error ? <p className="error-text">{error}</p> : null}
       {infoMessage ? <p className="success-text">{infoMessage}</p> : null}
 
       <div className="card">
+        <div className="section-header">
+          <div>
+            <span className="eyebrow">Review List</span>
+            <h2>Booking approval queue</h2>
+            <p className="muted">Each card keeps route, customer, cargo, and driver assignment controls in one place.</p>
+          </div>
+        </div>
+
         {bookings.length === 0 ? (
           <p className="muted">No pending bookings available.</p>
         ) : (
@@ -85,12 +104,15 @@ const PendingBookingsPage = () => {
                   <StatusBadge status={booking.status} />
                 </div>
 
-                <p className="muted">
-                  Customer: {booking.customer?.name || 'Unknown'} ({booking.customer?.email || 'NA'})
-                </p>
-                <p className="muted">
-                  Goods: {booking.goodsType} | Vehicle: {booking.vehicleType} | Distance: {booking.distanceKm} km
-                </p>
+                <div className="detail-row">
+                  <span className="detail-chip">
+                    Customer: {booking.customer?.name || 'Unknown'}
+                  </span>
+                  <span className="detail-chip">{booking.customer?.email || 'NA'}</span>
+                  <span className="detail-chip">{booking.goodsType}</span>
+                  <span className="detail-chip">{booking.vehicleType}</span>
+                  <span className="detail-chip">{booking.distanceKm} km</span>
+                </div>
 
                 <div className="booking-actions">
                   <label>
