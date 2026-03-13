@@ -12,6 +12,10 @@ import PendingBookingsPage from './pages/PendingBookingsPage';
 import InvoicePage from './pages/InvoicePage';
 import PaymentPage from './pages/PaymentPage';
 import NotFoundPage from './pages/NotFoundPage';
+import OwnerVerificationPage from './pages/OwnerVerificationPage';
+import AdminVerificationPage from './pages/AdminVerificationPage';
+import SupportPage from './pages/SupportPage';
+import AdminSupportPage from './pages/AdminSupportPage';
 
 const AppLayout = () => {
   const location = useLocation();
@@ -78,6 +82,14 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/customer/support"
+          element={
+            <ProtectedRoute allowedRoles={['CUSTOMER']}>
+              <SupportPage />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/owner/dashboard"
@@ -103,12 +115,37 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/owner/verification"
+          element={
+            <ProtectedRoute allowedRoles={['OWNER']}>
+              <OwnerVerificationPage />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/driver/dashboard"
           element={
             <ProtectedRoute allowedRoles={['DRIVER']}>
               <DriverDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/verification-requests"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <AdminVerificationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/support-queries"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <AdminSupportPage />
             </ProtectedRoute>
           }
         />

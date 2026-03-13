@@ -28,10 +28,19 @@ const LoginPage = () => {
 
     try {
       const data = await loginUser(form);
+
+      if (!data?.token || !data?.user?.role) {
+        throw new Error('Invalid login response from server.');
+      }
+
       login(data);
       navigate(roleHomePath(data.user.role));
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      if (!err.response) {
+        setError('Unable to reach the API server. Check backend is running on http://localhost:5000.');
+      } else {
+        setError(err.response?.data?.message || err.message || 'Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

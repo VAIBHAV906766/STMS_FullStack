@@ -3,7 +3,8 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../config/prisma');
 const asyncHandler = require('../middleware/asyncHandler');
 
-const VALID_ROLES = ['CUSTOMER', 'OWNER', 'DRIVER'];
+const ALL_ROLES = ['CUSTOMER', 'OWNER', 'DRIVER', 'ADMIN'];
+const PUBLIC_SIGNUP_ROLES = ['CUSTOMER', 'OWNER', 'DRIVER'];
 
 const generateToken = (user) =>
   jwt.sign(
@@ -18,16 +19,24 @@ const generateToken = (user) =>
   );
 
 const register = asyncHandler(async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const name = String(req.body.name || '').trim();
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const password = String(req.body.password || '');
+  const role = String(req.body.role || '').toUpperCase();
 
   if (!name || !email || !password || !role) {
     res.status(400);
     throw new Error('Name, email, password, and role are required.');
   }
 
-  if (!VALID_ROLES.includes(role)) {
+  if (!ALL_ROLES.includes(role)) {
     res.status(400);
     throw new Error('Invalid role selected.');
+  }
+
+  if (!PUBLIC_SIGNUP_ROLES.includes(role)) {
+    res.status(403);
+    throw new Error('Public signup supports only CUSTOMER, OWNER, and DRIVER roles.');
   }
 
   if (password.length < 6) {
@@ -70,14 +79,25 @@ const register = asyncHandler(async (req, res) => {
 });
 
 const login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const password = String(req.body.password || '');
 
   if (!email || !password) {
     res.status(400);
     throw new Error('Email and password are required.');
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      passwordHash: true,
+      createdAt: true
+    }
+  });
 
   if (!user) {
     res.status(401);

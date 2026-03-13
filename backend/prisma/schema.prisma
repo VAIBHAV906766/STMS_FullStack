@@ -11,6 +11,7 @@ enum Role {
   CUSTOMER
   OWNER
   DRIVER
+  ADMIN
 }
 
 enum BookingStatus {
@@ -24,34 +25,50 @@ enum InvoiceStatus {
   PAID
 }
 
+enum SupportQueryStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
 model User {
-  id           Int       @id @default(autoincrement())
-  name         String
-  email        String    @unique
-  passwordHash String    @map("password_hash")
-  role         Role
-  createdAt    DateTime  @default(now()) @map("created_at")
-  bookings     Booking[] @relation("CustomerBookings")
-  assignedTrips Booking[] @relation("DriverTrips")
-  invoices     Invoice[] @relation("CustomerInvoices")
+  id                      Int            @id @default(autoincrement())
+  name                    String
+  email                   String         @unique
+  passwordHash            String         @map("password_hash")
+  role                    Role
+  ownerVerified           Boolean        @default(false) @map("owner_verified")
+  companyName             String?        @map("company_name")
+  companyLicenseNumber    String?        @map("company_license_number")
+  companyAddress          String?        @map("company_address")
+  verificationRequestedAt DateTime?      @map("verification_requested_at")
+  createdAt               DateTime       @default(now()) @map("created_at")
+  bookings                Booking[]      @relation("CustomerBookings")
+  assignedTrips           Booking[]      @relation("DriverTrips")
+  approvedBookings        Booking[]      @relation("ApprovedOwnerBookings")
+  invoices                Invoice[]      @relation("CustomerInvoices")
+  supportQueries          SupportQuery[] @relation("CustomerSupportQueries")
 
   @@map("users")
 }
 
 model Booking {
-  id             Int           @id @default(autoincrement()) @map("booking_id")
-  customerId     Int           @map("customer_id")
-  driverId       Int?          @map("driver_id")
-  pickupLocation String        @map("pickup_location")
-  dropLocation   String        @map("drop_location")
-  goodsType      String        @map("goods_type")
-  vehicleType    String        @map("vehicle_type")
-  distanceKm     Float         @map("distance_km")
-  status         BookingStatus @default(PENDING)
-  createdAt      DateTime      @default(now()) @map("created_at")
-  customer       User          @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
-  driver         User?         @relation("DriverTrips", fields: [driverId], references: [id])
-  invoice        Invoice?
+  id                Int            @id @default(autoincrement()) @map("booking_id")
+  customerId        Int            @map("customer_id")
+  driverId          Int?           @map("driver_id")
+  approvedByOwnerId Int?           @map("approved_by_owner_id")
+  pickupLocation    String         @map("pickup_location")
+  dropLocation      String         @map("drop_location")
+  goodsType         String         @map("goods_type")
+  vehicleType       String         @map("vehicle_type")
+  distanceKm        Float          @map("distance_km")
+  status            BookingStatus  @default(PENDING)
+  createdAt         DateTime       @default(now()) @map("created_at")
+  customer          User           @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
+  driver            User?          @relation("DriverTrips", fields: [driverId], references: [id])
+  approvedByOwner   User?          @relation("ApprovedOwnerBookings", fields: [approvedByOwnerId], references: [id], onDelete: SetNull)
+  invoice           Invoice?
+  deliveryStops     DeliveryStop[]
 
   @@map("bookings")
 }
@@ -81,4 +98,28 @@ model Payment {
   invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@map("payments")
+}
+
+model DeliveryStop {
+  id        Int     @id @default(autoincrement())
+  bookingId Int     @map("booking_id")
+  stopOrder Int     @map("stop_order")
+  location  String
+  notes     String?
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId, stopOrder])
+  @@map("delivery_stops")
+}
+
+model SupportQuery {
+  id         Int                @id @default(autoincrement())
+  customerId Int                @map("customer_id")
+  subject    String
+  message    String
+  status     SupportQueryStatus @default(OPEN)
+  createdAt  DateTime           @default(now()) @map("created_at")
+  customer   User               @relation("CustomerSupportQueries", fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("support_queries")
 }

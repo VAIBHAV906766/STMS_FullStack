@@ -6,6 +6,7 @@ import StatusBadge from '../components/StatusBadge';
 import { getMyBookings } from '../api/bookingApi';
 import { getMyInvoices } from '../api/invoiceApi';
 import { useAuth } from '../context/AuthContext';
+import { formatRouteChain, getStopLocations } from '../utils/bookingRoute';
 
 const CustomerDashboard = () => {
   const { user } = useAuth();
@@ -57,6 +58,9 @@ const CustomerDashboard = () => {
             <Link to="/customer/invoices" className="button secondary">
               View Invoices
             </Link>
+            <Link to="/customer/support" className="button secondary">
+              Support Queries
+            </Link>
           </>
         }
         stats={[
@@ -89,14 +93,29 @@ const CustomerDashboard = () => {
             {bookings.slice(0, 5).map((booking) => (
               <article key={booking.id} className="list-item">
                 <div className="list-copy">
-                  <h3>
-                    {booking.pickupLocation} to {booking.dropLocation}
-                  </h3>
+                  <h3>{formatRouteChain(booking.pickupLocation, booking.deliveryStops, booking.dropLocation)}</h3>
                   <div className="detail-row">
                     <span className="detail-chip">{booking.goodsType}</span>
                     <span className="detail-chip">{booking.vehicleType}</span>
                     <span className="detail-chip">{booking.distanceKm} km</span>
+                    {getStopLocations(booking.deliveryStops).length > 0 ? (
+                      <span className="detail-chip">
+                        Stops: {getStopLocations(booking.deliveryStops).join(', ')}
+                      </span>
+                    ) : null}
                   </div>
+                  {booking.approvedByOwner ? (
+                    <div className="detail-row">
+                      <span className="detail-chip">
+                        Approved by: {booking.approvedByOwner.companyName || booking.approvedByOwner.name}
+                      </span>
+                      {booking.approvedByOwner.ownerVerified ? (
+                        <span className="verified-badge">✔ Verified Transport Owner</span>
+                      ) : (
+                        <span className="status-badge not_requested">Owner not verified</span>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
                 <StatusBadge status={booking.status} />
               </article>

@@ -4,6 +4,7 @@ import DashboardCard from '../components/DashboardCard';
 import StatusBadge from '../components/StatusBadge';
 import { getAssignedTrips } from '../api/bookingApi';
 import { useAuth } from '../context/AuthContext';
+import { formatRouteChain, getStopLocations } from '../utils/bookingRoute';
 
 const DriverDashboard = () => {
   const { user } = useAuth();
@@ -69,15 +70,18 @@ const DriverDashboard = () => {
             {trips.map((trip) => (
               <article className="list-item" key={trip.id}>
                 <div className="list-copy">
-                  <h3>
-                    {trip.pickupLocation} to {trip.dropLocation}
-                  </h3>
+                  <h3>{formatRouteChain(trip.pickupLocation, trip.deliveryStops, trip.dropLocation)}</h3>
                   <div className="detail-row">
                     <span className="detail-chip">
                       Customer: {trip.customer?.name || 'Unknown'}
                     </span>
                     <span className="detail-chip">{trip.goodsType}</span>
                     <span className="detail-chip">{trip.vehicleType}</span>
+                    {getStopLocations(trip.deliveryStops).length > 0 ? (
+                      <span className="detail-chip">
+                        Stops: {getStopLocations(trip.deliveryStops).join(', ')}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
                 <StatusBadge status={trip.status} />

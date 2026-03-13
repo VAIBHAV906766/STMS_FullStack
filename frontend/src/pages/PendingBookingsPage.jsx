@@ -3,6 +3,7 @@ import PageHero from '../components/PageHero';
 import StatusBadge from '../components/StatusBadge';
 import { getPendingBookings, updateBookingStatus } from '../api/bookingApi';
 import { getDrivers } from '../api/userApi';
+import { formatRouteChain, getStopLocations } from '../utils/bookingRoute';
 
 const PendingBookingsPage = () => {
   const [bookings, setBookings] = useState([]);
@@ -98,9 +99,7 @@ const PendingBookingsPage = () => {
             {bookings.map((booking) => (
               <article key={booking.id} className="list-item stacked">
                 <div className="list-item-head">
-                  <h3>
-                    {booking.pickupLocation} to {booking.dropLocation}
-                  </h3>
+                  <h3>{formatRouteChain(booking.pickupLocation, booking.deliveryStops, booking.dropLocation)}</h3>
                   <StatusBadge status={booking.status} />
                 </div>
 
@@ -112,6 +111,11 @@ const PendingBookingsPage = () => {
                   <span className="detail-chip">{booking.goodsType}</span>
                   <span className="detail-chip">{booking.vehicleType}</span>
                   <span className="detail-chip">{booking.distanceKm} km</span>
+                  {getStopLocations(booking.deliveryStops).length > 0 ? (
+                    <span className="detail-chip">
+                      Stops: {getStopLocations(booking.deliveryStops).join(', ')}
+                    </span>
+                  ) : null}
                 </div>
 
                 <div className="booking-actions">

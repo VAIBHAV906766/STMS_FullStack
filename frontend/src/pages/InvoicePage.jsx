@@ -5,6 +5,7 @@ import StatusBadge from '../components/StatusBadge';
 import { useAuth } from '../context/AuthContext';
 import { getApprovedUninvoicedBookings } from '../api/bookingApi';
 import { generateInvoice, getMyInvoices, getOwnerInvoices } from '../api/invoiceApi';
+import { formatRouteChain, getStopLocations } from '../utils/bookingRoute';
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('en-IN', {
@@ -200,11 +201,42 @@ const InvoicePage = () => {
                   <span className="detail-chip">{formatCurrency(invoice.totalAmount)}</span>
                 </div>
 
+                {invoice.booking ? (
+                  <div className="detail-row">
+                    <span className="detail-chip">
+                      Route:{' '}
+                      {formatRouteChain(
+                        invoice.booking.pickupLocation,
+                        invoice.booking.deliveryStops,
+                        invoice.booking.dropLocation
+                      )}
+                    </span>
+                    {getStopLocations(invoice.booking.deliveryStops).length > 0 ? (
+                      <span className="detail-chip">
+                        Stops: {getStopLocations(invoice.booking.deliveryStops).join(', ')}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+
                 {!isCustomer ? (
                   <div className="detail-row">
                     <span className="detail-chip">
                       Customer: {invoice.customer?.name || invoice.booking?.customer?.name || 'Unknown'}
                     </span>
+                  </div>
+                ) : invoice.booking?.approvedByOwner ? (
+                  <div className="detail-row">
+                    <span className="detail-chip">
+                      Owner:{' '}
+                      {invoice.booking.approvedByOwner.companyName ||
+                        invoice.booking.approvedByOwner.name}
+                    </span>
+                    {invoice.booking.approvedByOwner.ownerVerified ? (
+                      <span className="verified-badge">✔ Verified Transport Owner</span>
+                    ) : (
+                      <span className="status-badge not_requested">Owner not verified</span>
+                    )}
                   </div>
                 ) : null}
 

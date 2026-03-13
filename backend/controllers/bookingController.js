@@ -7,7 +7,8 @@ const createBooking = asyncHandler(async (req, res) => {
     dropLocation,
     goodsType,
     vehicleType,
-    distanceKm
+    distanceKm,
+    deliveryStops = []
   } = req.body;
 
   if (!pickupLocation || !dropLocation || !goodsType || !vehicleType || distanceKm === undefined) {
@@ -22,6 +23,33 @@ const createBooking = asyncHandler(async (req, res) => {
     throw new Error('Distance must be a positive number.');
   }
 
+  if (!Array.isArray(deliveryStops)) {
+    res.status(400);
+    throw new Error('deliveryStops must be an array.');
+  }
+
+  const normalizedStops = deliveryStops.map((stop, index) => {
+    if (!stop || typeof stop !== 'object') {
+      res.status(400);
+      throw new Error(`Stop #${index + 1} is invalid.`);
+    }
+
+    const location = String(stop.location || '').trim();
+
+    if (!location) {
+      res.status(400);
+      throw new Error(`Stop #${index + 1} location is required.`);
+    }
+
+    const notes = stop.notes ? String(stop.notes).trim() : null;
+
+    return {
+      stopOrder: index + 1,
+      location,
+      notes: notes || null
+    };
+  });
+
   const booking = await prisma.booking.create({
     data: {
       customerId: req.user.id,
@@ -29,11 +57,16 @@ const createBooking = asyncHandler(async (req, res) => {
       dropLocation,
       goodsType,
       vehicleType,
-      distanceKm: distance
+      distanceKm: distance,
+      deliveryStops: normalizedStops.length ? { create: normalizedStops } : undefined
     },
     include: {
       customer: { select: { id: true, name: true, email: true } },
-      driver: { select: { id: true, name: true, email: true } }
+      driver: { select: { id: true, name: true, email: true } },
+      approvedByOwner: {
+        select: { id: true, name: true, email: true, ownerVerified: true, companyName: true }
+      },
+      deliveryStops: { orderBy: { stopOrder: 'asc' } }
     }
   });
 
@@ -48,7 +81,11 @@ const getMyBookings = asyncHandler(async (req, res) => {
     where: { customerId: req.user.id },
     include: {
       invoice: true,
-      driver: { select: { id: true, name: true, email: true } }
+      driver: { select: { id: true, name: true, email: true } },
+      approvedByOwner: {
+        select: { id: true, name: true, email: true, ownerVerified: true, companyName: true }
+      },
+      deliveryStops: { orderBy: { stopOrder: 'asc' } }
     },
     orderBy: { createdAt: 'desc' }
   });
@@ -61,7 +98,11 @@ const getPendingBookings = asyncHandler(async (req, res) => {
     where: { status: 'PENDING' },
     include: {
       customer: { select: { id: true, name: true, email: true } },
-      driver: { select: { id: true, name: true, email: true } }
+      driver: { select: { id: true, name: true, email: true } },
+      approvedByOwner: {
+        select: { id: true, name: true, email: true, ownerVerified: true, companyName: true }
+      },
+      deliveryStops: { orderBy: { stopOrder: 'asc' } }
     },
     orderBy: { createdAt: 'desc' }
   });
@@ -77,7 +118,11 @@ const getApprovedUninvoicedBookings = asyncHandler(async (req, res) => {
     },
     include: {
       customer: { select: { id: true, name: true, email: true } },
-      driver: { select: { id: true, name: true, email: true } }
+      driver: { select: { id: true, name: true, email: true } },
+      approvedByOwner: {
+        select: { id: true, name: true, email: true, ownerVerified: true, companyName: true }
+      },
+      deliveryStops: { orderBy: { stopOrder: 'asc' } }
     },
     orderBy: { createdAt: 'desc' }
   });
@@ -144,11 +189,16 @@ const updateBookingStatus = asyncHandler(async (req, res) => {
     where: { id: bookingId },
     data: {
       status,
-      driverId: status === 'APPROVED' ? finalDriverId : null
+      driverId: status === 'APPROVED' ? finalDriverId : null,
+      approvedByOwnerId: status === 'APPROVED' ? req.user.id : null
     },
     include: {
       customer: { select: { id: true, name: true, email: true } },
       driver: { select: { id: true, name: true, email: true } },
+      approvedByOwner: {
+        select: { id: true, name: true, email: true, ownerVerified: true, companyName: true }
+      },
+      deliveryStops: { orderBy: { stopOrder: 'asc' } },
       invoice: true
     }
   });
@@ -167,6 +217,10 @@ const getAssignedTrips = asyncHandler(async (req, res) => {
     },
     include: {
       customer: { select: { id: true, name: true, email: true } },
+      approvedByOwner: {
+        select: { id: true, name: true, email: true, ownerVerified: true, companyName: true }
+      },
+      deliveryStops: { orderBy: { stopOrder: 'asc' } },
       invoice: true
     },
     orderBy: { createdAt: 'desc' }

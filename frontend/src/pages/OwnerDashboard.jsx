@@ -63,6 +63,9 @@ const OwnerDashboard = () => {
             <Link to="/owner/invoices" className="button secondary">
               Open Invoices
             </Link>
+            <Link to="/owner/verification" className="button secondary">
+              Request Verification
+            </Link>
           </>
         }
         stats={[
@@ -87,6 +90,9 @@ const OwnerDashboard = () => {
         </Link>
         <Link to="/owner/invoices" className="button secondary">
           Manage Invoices
+        </Link>
+        <Link to="/owner/verification" className="button secondary">
+          Request Verification
         </Link>
       </div>
 

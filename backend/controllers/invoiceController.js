@@ -63,7 +63,14 @@ const getMyInvoices = asyncHandler(async (req, res) => {
   const invoices = await prisma.invoice.findMany({
     where: { customerId: req.user.id },
     include: {
-      booking: true,
+      booking: {
+        include: {
+          approvedByOwner: {
+            select: { id: true, name: true, email: true, ownerVerified: true, companyName: true }
+          },
+          deliveryStops: { orderBy: { stopOrder: 'asc' } }
+        }
+      },
       payments: true
     },
     orderBy: { createdAt: 'desc' }
@@ -78,7 +85,11 @@ const getOwnerInvoices = asyncHandler(async (req, res) => {
       booking: {
         include: {
           customer: { select: { id: true, name: true, email: true } },
-          driver: { select: { id: true, name: true, email: true } }
+          driver: { select: { id: true, name: true, email: true } },
+          approvedByOwner: {
+            select: { id: true, name: true, email: true, ownerVerified: true, companyName: true }
+          },
+          deliveryStops: { orderBy: { stopOrder: 'asc' } }
         }
       },
       customer: { select: { id: true, name: true, email: true } },

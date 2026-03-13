@@ -1,19 +1,22 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 
 const AuthContext = createContext(null);
+const TOKEN_KEYS = ['stms_token', 'token'];
+const USER_KEY = 'stms_user';
 
 const getStoredUser = () => {
   try {
-    const raw = localStorage.getItem('stms_user');
+    const raw = localStorage.getItem(USER_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch (error) {
     return null;
   }
 };
 
-const getStoredToken = () => localStorage.getItem('stms_token');
+const getStoredToken = () => TOKEN_KEYS.map((key) => localStorage.getItem(key)).find(Boolean) || null;
 
 export const roleHomePath = (role) => {
+  if (role === 'ADMIN') return '/admin/verification-requests';
   if (role === 'OWNER') return '/owner/dashboard';
   if (role === 'DRIVER') return '/driver/dashboard';
   return '/customer/dashboard';
@@ -24,21 +27,25 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(getStoredToken());
 
   const login = (authData) => {
-    const nextToken = authData?.token;
+    const nextToken = authData?.token || authData?.accessToken;
     const nextUser = authData?.user;
+
+    if (!nextToken || !nextUser?.role) {
+      throw new Error('Invalid authentication payload.');
+    }
 
     setToken(nextToken);
     setUser(nextUser);
 
-    localStorage.setItem('stms_token', nextToken);
-    localStorage.setItem('stms_user', JSON.stringify(nextUser));
+    TOKEN_KEYS.forEach((key) => localStorage.setItem(key, nextToken));
+    localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
-    localStorage.removeItem('stms_token');
-    localStorage.removeItem('stms_user');
+    TOKEN_KEYS.forEach((key) => localStorage.removeItem(key));
+    localStorage.removeItem(USER_KEY);
   };
 
   const value = useMemo(

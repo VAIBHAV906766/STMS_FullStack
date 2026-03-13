@@ -11,9 +11,12 @@ const initialForm = {
   distanceKm: ''
 };
 
+const initialStop = { location: '', notes: '' };
+
 const BookingFormPage = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState(initialForm);
+  const [stops, setStops] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -23,6 +26,20 @@ const BookingFormPage = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleAddStop = () => {
+    setStops((prev) => [...prev, { ...initialStop }]);
+  };
+
+  const handleRemoveStop = (index) => {
+    setStops((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleStopChange = (index, key, value) => {
+    setStops((prev) =>
+      prev.map((stop, idx) => (idx === index ? { ...stop, [key]: value } : stop))
+    );
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
@@ -30,13 +47,28 @@ const BookingFormPage = () => {
     setSuccess('');
 
     try {
+      const normalizedStops = stops
+        .map((stop) => ({
+          location: String(stop.location || '').trim(),
+          notes: String(stop.notes || '').trim()
+        }))
+        .filter((stop) => stop.location);
+
+      if (stops.some((stop) => String(stop.location || '').trim() === '')) {
+        setError('Each added stop must include a location.');
+        setLoading(false);
+        return;
+      }
+
       await createBooking({
         ...form,
-        distanceKm: Number(form.distanceKm)
+        distanceKm: Number(form.distanceKm),
+        deliveryStops: normalizedStops
       });
 
       setSuccess('Booking submitted successfully.');
       setForm(initialForm);
+      setStops([]);
 
       setTimeout(() => {
         navigate('/customer/dashboard');
@@ -136,6 +168,69 @@ const BookingFormPage = () => {
               required
             />
           </label>
+
+          <div className="full-width card nested-card">
+            <div className="section-header">
+              <div>
+                <span className="eyebrow">Multi-stop Delivery</span>
+                <h3>Intermediate stops</h3>
+                <p className="muted">
+                  Add optional delivery stops between pickup and final destination.
+                </p>
+              </div>
+              <button type="button" className="button secondary" onClick={handleAddStop}>
+                Add Stop
+              </button>
+            </div>
+
+            {stops.length === 0 ? (
+              <p className="muted">No intermediate stops added.</p>
+            ) : (
+              <div className="list-grid">
+                {stops.map((stop, index) => (
+                  <article className="list-item stacked" key={`stop-${index + 1}`}>
+                    <div className="list-item-head">
+                      <h3>Stop #{index + 1}</h3>
+                      <button
+                        type="button"
+                        className="button danger"
+                        onClick={() => handleRemoveStop(index)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+
+                    <div className="form-grid two-col">
+                      <label>
+                        Stop Location
+                        <input
+                          type="text"
+                          value={stop.location}
+                          onChange={(event) =>
+                            handleStopChange(index, 'location', event.target.value)
+                          }
+                          placeholder="Lonavala"
+                          required
+                        />
+                      </label>
+
+                      <label>
+                        Notes (Optional)
+                        <input
+                          type="text"
+                          value={stop.notes}
+                          onChange={(event) =>
+                            handleStopChange(index, 'notes', event.target.value)
+                          }
+                          placeholder="Unload partial goods"
+                        />
+                      </label>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
 
           {error ? <p className="error-text full-width">{error}</p> : null}
           {success ? <p className="success-text full-width">{success}</p> : null}

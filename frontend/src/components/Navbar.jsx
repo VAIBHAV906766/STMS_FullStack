@@ -5,14 +5,20 @@ const linkMap = {
   CUSTOMER: [
     { to: '/customer/dashboard', label: 'Dashboard' },
     { to: '/customer/bookings/new', label: 'Create Booking' },
-    { to: '/customer/invoices', label: 'Invoices' }
+    { to: '/customer/invoices', label: 'Invoices' },
+    { to: '/customer/support', label: 'Support' }
   ],
   OWNER: [
     { to: '/owner/dashboard', label: 'Dashboard' },
     { to: '/owner/pending-bookings', label: 'Pending' },
-    { to: '/owner/invoices', label: 'Invoices' }
+    { to: '/owner/invoices', label: 'Invoices' },
+    { to: '/owner/verification', label: 'Verification' }
   ],
-  DRIVER: [{ to: '/driver/dashboard', label: 'Dashboard' }]
+  DRIVER: [{ to: '/driver/dashboard', label: 'Dashboard' }],
+  ADMIN: [
+    { to: '/admin/verification-requests', label: 'Owner Verification' },
+    { to: '/admin/support-queries', label: 'Support Queries' }
+  ]
 };
 
 const formatRole = (role) => `${role.slice(0, 1)}${role.slice(1).toLowerCase()}`;
