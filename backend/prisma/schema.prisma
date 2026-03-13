@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  OWNER
+  DRIVER
+}
+
+enum BookingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  name         String
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  role         Role
+  createdAt    DateTime  @default(now()) @map("created_at")
+  bookings     Booking[] @relation("CustomerBookings")
+  assignedTrips Booking[] @relation("DriverTrips")
+  invoices     Invoice[] @relation("CustomerInvoices")
+
+  @@map("users")
+}
+
+model Booking {
+  id             Int           @id @default(autoincrement()) @map("booking_id")
+  customerId     Int           @map("customer_id")
+  driverId       Int?          @map("driver_id")
+  pickupLocation String        @map("pickup_location")
+  dropLocation   String        @map("drop_location")
+  goodsType      String        @map("goods_type")
+  vehicleType    String        @map("vehicle_type")
+  distanceKm     Float         @map("distance_km")
+  status         BookingStatus @default(PENDING)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  customer       User          @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
+  driver         User?         @relation("DriverTrips", fields: [driverId], references: [id])
+  invoice        Invoice?
+
+  @@map("bookings")
+}
+
+model Invoice {
+  id          Int           @id @default(autoincrement()) @map("invoice_id")
+  bookingId   Int           @unique @map("booking_id")
+  customerId  Int           @map("customer_id")
+  distanceKm  Float         @map("distance_km")
+  ratePerKm   Float         @default(20) @map("rate_per_km")
+  totalAmount Float         @map("total_amount")
+  status      InvoiceStatus @default(PENDING)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  booking     Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customer    User          @relation("CustomerInvoices", fields: [customerId], references: [id], onDelete: Cascade)
+  payments    Payment[]
+
+  @@map("invoices")
+}
+
+model Payment {
+  id          Int      @id @default(autoincrement()) @map("payment_id")
+  invoiceId   Int      @map("invoice_id")
+  amount      Float
+  paymentMode String   @map("payment_mode")
+  paidAt      DateTime @default(now()) @map("paid_at")
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
