@@ -15,6 +15,11 @@ export const getPendingBookings = async () => {
   return data;
 };
 
+export const getReversibleBookings = async () => {
+  const { data } = await apiClient.get('/bookings/reversible');
+  return data;
+};
+
 export const getApprovedUninvoicedBookings = async () => {
   const { data } = await apiClient.get('/bookings/approved-uninvoiced');
   return data;

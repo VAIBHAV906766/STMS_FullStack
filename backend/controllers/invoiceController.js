@@ -1,3 +1,4 @@
+const { randomUUID } = require('crypto');
 const prisma = require('../config/prisma');
 const asyncHandler = require('../middleware/asyncHandler');
 
@@ -27,6 +28,11 @@ const generateInvoice = asyncHandler(async (req, res) => {
     throw new Error('Booking not found.');
   }
 
+  if (booking.ownerId !== req.user.id) {
+    res.status(403);
+    throw new Error('You can only generate invoices for your assigned bookings.');
+  }
+
   if (booking.status !== 'APPROVED') {
     res.status(400);
     throw new Error('Only approved bookings can be invoiced.');
@@ -43,6 +49,7 @@ const generateInvoice = asyncHandler(async (req, res) => {
     data: {
       bookingId: booking.id,
       customerId: booking.customerId,
+      qrCode: randomUUID(),
       distanceKm: booking.distanceKm,
       ratePerKm: parsedRate,
       totalAmount
@@ -63,6 +70,7 @@ const getMyInvoices = asyncHandler(async (req, res) => {
   const invoices = await prisma.invoice.findMany({
     where: { customerId: req.user.id },
     include: {
+      customer: { select: { id: true, name: true, email: true } },
       booking: {
         include: {
           approvedByOwner: {
@@ -81,9 +89,17 @@ const getMyInvoices = asyncHandler(async (req, res) => {
 
 const getOwnerInvoices = asyncHandler(async (req, res) => {
   const invoices = await prisma.invoice.findMany({
+    where: {
+      booking: {
+        ownerId: req.user.id
+      }
+    },
     include: {
       booking: {
         include: {
+          owner: {
+            select: { id: true, name: true, email: true, ownerVerified: true, companyName: true }
+          },
           customer: { select: { id: true, name: true, email: true } },
           driver: { select: { id: true, name: true, email: true } },
           approvedByOwner: {

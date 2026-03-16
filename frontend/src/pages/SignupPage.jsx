@@ -42,7 +42,7 @@ const SignupPage = () => {
       navigate(roleHomePath(data.user.role));
     } catch (err) {
       if (!err.response) {
-        setError('Unable to reach the API server. Check backend is running on http://localhost:5000.');
+        setError('Unable to reach the API server. Ensure backend is running and restart the frontend dev server.');
       } else {
         setError(err.response?.data?.message || err.message || 'Signup failed. Please try again.');
       }

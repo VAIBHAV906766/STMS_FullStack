@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { getApprovedUninvoicedBookings } from '../api/bookingApi';
 import { generateInvoice, getMyInvoices, getOwnerInvoices } from '../api/invoiceApi';
 import { formatRouteChain, getStopLocations } from '../utils/bookingRoute';
+import { downloadInvoicePdf } from '../utils/invoicePdf';
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('en-IN', {
@@ -24,6 +25,7 @@ const InvoicePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState(null);
   const paidCount = invoices.filter((invoice) => invoice.status === 'PAID').length;
   const pendingCount = invoices.filter((invoice) => invoice.status === 'PENDING').length;
 
@@ -46,7 +48,11 @@ const InvoicePage = () => {
         setBookingsToInvoice(bookingData.bookings || []);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to load invoices.');
+      if (!err.response) {
+        setError('Unable to reach API server. Ensure backend is running on http://localhost:5000.');
+      } else {
+        setError(err.response?.data?.message || 'Unable to load invoices.');
+      }
     } finally {
       setLoading(false);
     }
@@ -76,7 +82,23 @@ const InvoicePage = () => {
       setSuccess('Invoice generated successfully.');
       fetchInvoices();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to generate invoice.');
+      if (!err.response) {
+        setError('Unable to reach API server. Ensure backend is running on http://localhost:5000.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to generate invoice.');
+      }
+    }
+  };
+
+  const handleDownload = async (invoice) => {
+    try {
+      setError('');
+      setDownloadingInvoiceId(invoice.id);
+      await downloadInvoicePdf(invoice);
+    } catch (err) {
+      setError(err.message || 'Unable to download invoice PDF.');
+    } finally {
+      setDownloadingInvoiceId(null);
     }
   };
 
@@ -233,7 +255,7 @@ const InvoicePage = () => {
                         invoice.booking.approvedByOwner.name}
                     </span>
                     {invoice.booking.approvedByOwner.ownerVerified ? (
-                      <span className="verified-badge">✔ Verified Transport Owner</span>
+                      <span className="verified-badge">[Verified] Transport Owner</span>
                     ) : (
                       <span className="status-badge not_requested">Owner not verified</span>
                     )}
@@ -241,9 +263,28 @@ const InvoicePage = () => {
                 ) : null}
 
                 {isCustomer && invoice.status === 'PENDING' ? (
-                  <Link to={`/customer/payment/${invoice.id}`} className="button">
-                    Pay Now
-                  </Link>
+                  <div className="button-row">
+                    <Link to={`/customer/payment/${invoice.id}`} className="button">
+                      Pay Now
+                    </Link>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={() => handleDownload(invoice)}
+                      disabled={downloadingInvoiceId === invoice.id}
+                    >
+                      {downloadingInvoiceId === invoice.id ? 'Preparing PDF...' : 'Download PDF'}
+                    </button>
+                  </div>
+                ) : isCustomer ? (
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => handleDownload(invoice)}
+                    disabled={downloadingInvoiceId === invoice.id}
+                  >
+                    {downloadingInvoiceId === invoice.id ? 'Preparing PDF...' : 'Download PDF'}
+                  </button>
                 ) : null}
 
                 {!isCustomer && invoice.payments?.length > 0 ? (
@@ -262,3 +303,4 @@ const InvoicePage = () => {
 };
 
 export default InvoicePage;
+

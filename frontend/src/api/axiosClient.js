@@ -1,15 +1,11 @@
 import axios from 'axios';
 
-const configuredBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-const runtimeHost = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-const isLocalHost = runtimeHost === 'localhost' || runtimeHost === '127.0.0.1';
+const configuredBaseUrl = (import.meta.env.VITE_API_URL || '').trim();
+const shouldUseDevProxy =
+  import.meta.env.DEV &&
+  (!configuredBaseUrl || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/api\/?$/i.test(configuredBaseUrl));
 
-const baseURL =
-  !isLocalHost && configuredBaseUrl.includes('localhost')
-    ? configuredBaseUrl.replace('localhost', runtimeHost)
-    : !isLocalHost && configuredBaseUrl.includes('127.0.0.1')
-      ? configuredBaseUrl.replace('127.0.0.1', runtimeHost)
-      : configuredBaseUrl;
+const baseURL = shouldUseDevProxy ? '/api' : configuredBaseUrl || '/api';
 
 const apiClient = axios.create({
   baseURL,

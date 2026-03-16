@@ -44,6 +44,7 @@ model User {
   verificationRequestedAt DateTime?      @map("verification_requested_at")
   createdAt               DateTime       @default(now()) @map("created_at")
   bookings                Booking[]      @relation("CustomerBookings")
+  ownerManagedBookings    Booking[]      @relation("BookingOwner")
   assignedTrips           Booking[]      @relation("DriverTrips")
   approvedBookings        Booking[]      @relation("ApprovedOwnerBookings")
   invoices                Invoice[]      @relation("CustomerInvoices")
@@ -55,6 +56,7 @@ model User {
 model Booking {
   id                Int            @id @default(autoincrement()) @map("booking_id")
   customerId        Int            @map("customer_id")
+  ownerId           Int?           @map("owner_id")
   driverId          Int?           @map("driver_id")
   approvedByOwnerId Int?           @map("approved_by_owner_id")
   pickupLocation    String         @map("pickup_location")
@@ -65,11 +67,13 @@ model Booking {
   status            BookingStatus  @default(PENDING)
   createdAt         DateTime       @default(now()) @map("created_at")
   customer          User           @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
+  owner             User?          @relation("BookingOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   driver            User?          @relation("DriverTrips", fields: [driverId], references: [id])
   approvedByOwner   User?          @relation("ApprovedOwnerBookings", fields: [approvedByOwnerId], references: [id], onDelete: SetNull)
   invoice           Invoice?
   deliveryStops     DeliveryStop[]
 
+  @@index([ownerId])
   @@map("bookings")
 }
 
@@ -77,6 +81,7 @@ model Invoice {
   id          Int           @id @default(autoincrement()) @map("invoice_id")
   bookingId   Int           @unique @map("booking_id")
   customerId  Int           @map("customer_id")
+  qrCode      String?       @unique @map("qr_code")
   distanceKm  Float         @map("distance_km")
   ratePerKm   Float         @default(20) @map("rate_per_km")
   totalAmount Float         @map("total_amount")

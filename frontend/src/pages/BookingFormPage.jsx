@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createBooking } from '../api/bookingApi';
 import PageHero from '../components/PageHero';
+import { getOwners } from '../api/userApi';
 
 const initialForm = {
+  ownerId: '',
   pickupLocation: '',
   dropLocation: '',
   goodsType: '',
@@ -17,9 +19,43 @@ const BookingFormPage = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState(initialForm);
   const [stops, setStops] = useState([]);
+  const [owners, setOwners] = useState([]);
+  const [ownersLoading, setOwnersLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    let active = true;
+
+    const fetchOwners = async () => {
+      try {
+        const data = await getOwners();
+        const availableOwners = data.owners || [];
+
+        if (!active) return;
+
+        setOwners(availableOwners);
+        setForm((prev) => ({
+          ...prev,
+          ownerId: prev.ownerId || (availableOwners[0] ? String(availableOwners[0].id) : '')
+        }));
+      } catch (err) {
+        if (!active) return;
+        setError(err.response?.data?.message || 'Unable to load owners for booking.');
+      } finally {
+        if (active) {
+          setOwnersLoading(false);
+        }
+      }
+    };
+
+    fetchOwners();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -47,6 +83,12 @@ const BookingFormPage = () => {
     setSuccess('');
 
     try {
+      if (!form.ownerId) {
+        setError('Please select an owner for this booking.');
+        setLoading(false);
+        return;
+      }
+
       const normalizedStops = stops
         .map((stop) => ({
           location: String(stop.location || '').trim(),
@@ -62,19 +104,27 @@ const BookingFormPage = () => {
 
       await createBooking({
         ...form,
+        ownerId: Number(form.ownerId),
         distanceKm: Number(form.distanceKm),
         deliveryStops: normalizedStops
       });
 
       setSuccess('Booking submitted successfully.');
-      setForm(initialForm);
+      setForm({
+        ...initialForm,
+        ownerId: owners[0] ? String(owners[0].id) : ''
+      });
       setStops([]);
 
       setTimeout(() => {
         navigate('/customer/dashboard');
       }, 800);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create booking.');
+      if (!err.response) {
+        setError('Unable to reach API server. Ensure backend is running on http://localhost:5000.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to create booking.');
+      }
     } finally {
       setLoading(false);
     }
@@ -85,7 +135,7 @@ const BookingFormPage = () => {
       <PageHero
         eyebrow="Booking Intake"
         title="Create a new booking"
-        description="Submit route, goods, vehicle, and distance details. Once created, the request moves to the owner approval queue."
+        description="Select the service owner, then submit route, goods, vehicle, and distance details. The request is sent only to that owner."
         actions={
           <Link to="/customer/dashboard" className="button secondary">
             Back to Dashboard
@@ -107,6 +157,28 @@ const BookingFormPage = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="form-grid two-col">
+          <label>
+            Service Owner
+            <select
+              name="ownerId"
+              value={form.ownerId}
+              onChange={handleChange}
+              disabled={ownersLoading || owners.length === 0}
+              required
+            >
+              {ownersLoading ? <option value="">Loading owners...</option> : null}
+              {!ownersLoading && owners.length === 0 ? <option value="">No owners available</option> : null}
+              {!ownersLoading
+                ? owners.map((owner) => (
+                    <option key={owner.id} value={owner.id}>
+                      {owner.companyName || owner.name}
+                      {owner.ownerVerified ? ' [Verified]' : ''}
+                    </option>
+                  ))
+                : null}
+            </select>
+          </label>
+
           <label>
             Pickup Location
             <input
@@ -237,7 +309,11 @@ const BookingFormPage = () => {
 
           <div className="full-width">
             <div className="button-row">
-              <button type="submit" className="button" disabled={loading}>
+              <button
+                type="submit"
+                className="button"
+                disabled={loading || ownersLoading || owners.length === 0}
+              >
                 {loading ? 'Submitting...' : 'Submit Booking'}
               </button>
               <Link to="/customer/dashboard" className="button secondary">

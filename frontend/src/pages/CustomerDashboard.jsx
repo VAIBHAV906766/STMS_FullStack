@@ -7,6 +7,7 @@ import { getMyBookings } from '../api/bookingApi';
 import { getMyInvoices } from '../api/invoiceApi';
 import { useAuth } from '../context/AuthContext';
 import { formatRouteChain, getStopLocations } from '../utils/bookingRoute';
+import { downloadInvoicePdf } from '../utils/invoicePdf';
 
 const CustomerDashboard = () => {
   const { user } = useAuth();
@@ -14,6 +15,8 @@ const CustomerDashboard = () => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState(null);
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -35,6 +38,18 @@ const CustomerDashboard = () => {
   const totalBookings = bookings.length;
   const approvedBookings = bookings.filter((booking) => booking.status === 'APPROVED').length;
   const unpaidInvoices = invoices.filter((invoice) => invoice.status === 'PENDING').length;
+
+  const handleDownloadInvoice = async (invoice) => {
+    try {
+      setActionError('');
+      setDownloadingInvoiceId(invoice.id);
+      await downloadInvoicePdf(invoice);
+    } catch (err) {
+      setActionError(err.message || 'Unable to download invoice PDF.');
+    } finally {
+      setDownloadingInvoiceId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -71,6 +86,7 @@ const CustomerDashboard = () => {
       />
 
       {error ? <p className="error-text">{error}</p> : null}
+      {actionError ? <p className="error-text">{actionError}</p> : null}
 
       <div className="dashboard-grid">
         <DashboardCard title="Total Bookings" value={totalBookings} subtitle="Shipment requests logged" tone="sky" />
@@ -110,7 +126,7 @@ const CustomerDashboard = () => {
                         Approved by: {booking.approvedByOwner.companyName || booking.approvedByOwner.name}
                       </span>
                       {booking.approvedByOwner.ownerVerified ? (
-                        <span className="verified-badge">✔ Verified Transport Owner</span>
+                        <span className="verified-badge">[Verified] Transport Owner</span>
                       ) : (
                         <span className="status-badge not_requested">Owner not verified</span>
                       )}
@@ -123,8 +139,59 @@ const CustomerDashboard = () => {
           </div>
         )}
       </div>
+
+      <div className="card">
+        <div className="section-header">
+          <div>
+            <span className="eyebrow">Billing</span>
+            <h2>Recent invoices</h2>
+            <p className="muted">Download invoice PDF with the unique invoice QR token.</p>
+          </div>
+        </div>
+
+        {invoices.length === 0 ? (
+          <p className="muted">No invoices available yet.</p>
+        ) : (
+          <div className="list-grid">
+            {invoices.slice(0, 5).map((invoice) => (
+              <article key={invoice.id} className="list-item stacked">
+                <div className="list-item-head">
+                  <h3>Invoice #{invoice.id}</h3>
+                  <StatusBadge status={invoice.status} />
+                </div>
+
+                <div className="detail-row">
+                  <span className="detail-chip">Booking #{invoice.bookingId}</span>
+                  <span className="detail-chip">{invoice.distanceKm} km</span>
+                  <span className="detail-chip">
+                    INR {Number(invoice.totalAmount || 0).toFixed(2)}
+                  </span>
+                  {invoice.qrCode ? <span className="detail-chip">QR token ready</span> : null}
+                </div>
+
+                <div className="button-row">
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => handleDownloadInvoice(invoice)}
+                    disabled={downloadingInvoiceId === invoice.id}
+                  >
+                    {downloadingInvoiceId === invoice.id ? 'Preparing PDF...' : 'Download PDF'}
+                  </button>
+                  {invoice.status === 'PENDING' ? (
+                    <Link to={`/customer/payment/${invoice.id}`} className="button">
+                      Pay Now
+                    </Link>
+                  ) : null}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   );
 };
 
 export default CustomerDashboard;
+

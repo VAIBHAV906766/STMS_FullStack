@@ -3,6 +3,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 
 const createBooking = asyncHandler(async (req, res) => {
   const {
+    ownerId,
     pickupLocation,
     dropLocation,
     goodsType,
@@ -11,12 +12,26 @@ const createBooking = asyncHandler(async (req, res) => {
     deliveryStops = []
   } = req.body;
 
-  if (!pickupLocation || !dropLocation || !goodsType || !vehicleType || distanceKm === undefined) {
+  if (
+    ownerId === undefined ||
+    ownerId === null ||
+    !pickupLocation ||
+    !dropLocation ||
+    !goodsType ||
+    !vehicleType ||
+    distanceKm === undefined
+  ) {
     res.status(400);
-    throw new Error('All booking fields are required.');
+    throw new Error('ownerId, route, goods, vehicle, and distance are required.');
   }
 
+  const parsedOwnerId = Number(ownerId);
   const distance = Number(distanceKm);
+
+  if (Number.isNaN(parsedOwnerId)) {
+    res.status(400);
+    throw new Error('ownerId must be a valid number.');
+  }
 
   if (Number.isNaN(distance) || distance <= 0) {
     res.status(400);
@@ -50,9 +65,20 @@ const createBooking = asyncHandler(async (req, res) => {
     };
   });
 
+  const owner = await prisma.user.findUnique({
+    where: { id: parsedOwnerId },
+    select: { id: true, role: true }
+  });
+
+  if (!owner || owner.role !== 'OWNER') {
+    res.status(400);
+    throw new Error('Selected owner is invalid.');
+  }
+
   const booking = await prisma.booking.create({
     data: {
       customerId: req.user.id,
+      ownerId: parsedOwnerId,
       pickupLocation,
       dropLocation,
       goodsType,
@@ -62,6 +88,7 @@ const createBooking = asyncHandler(async (req, res) => {
     },
     include: {
       customer: { select: { id: true, name: true, email: true } },
+      owner: { select: { id: true, name: true, email: true, ownerVerified: true, companyName: true } },
       driver: { select: { id: true, name: true, email: true } },
       approvedByOwner: {
         select: { id: true, name: true, email: true, ownerVerified: true, companyName: true }
@@ -81,6 +108,7 @@ const getMyBookings = asyncHandler(async (req, res) => {
     where: { customerId: req.user.id },
     include: {
       invoice: true,
+      owner: { select: { id: true, name: true, email: true, ownerVerified: true, companyName: true } },
       driver: { select: { id: true, name: true, email: true } },
       approvedByOwner: {
         select: { id: true, name: true, email: true, ownerVerified: true, companyName: true }
@@ -95,9 +123,35 @@ const getMyBookings = asyncHandler(async (req, res) => {
 
 const getPendingBookings = asyncHandler(async (req, res) => {
   const bookings = await prisma.booking.findMany({
-    where: { status: 'PENDING' },
+    where: {
+      status: 'PENDING',
+      ownerId: req.user.id
+    },
     include: {
       customer: { select: { id: true, name: true, email: true } },
+      owner: { select: { id: true, name: true, email: true, ownerVerified: true, companyName: true } },
+      driver: { select: { id: true, name: true, email: true } },
+      approvedByOwner: {
+        select: { id: true, name: true, email: true, ownerVerified: true, companyName: true }
+      },
+      deliveryStops: { orderBy: { stopOrder: 'asc' } }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  res.status(200).json({ bookings });
+});
+
+const getReversibleBookings = asyncHandler(async (req, res) => {
+  const bookings = await prisma.booking.findMany({
+    where: {
+      status: { in: ['APPROVED', 'REJECTED'] },
+      ownerId: req.user.id,
+      invoice: null
+    },
+    include: {
+      customer: { select: { id: true, name: true, email: true } },
+      owner: { select: { id: true, name: true, email: true, ownerVerified: true, companyName: true } },
       driver: { select: { id: true, name: true, email: true } },
       approvedByOwner: {
         select: { id: true, name: true, email: true, ownerVerified: true, companyName: true }
@@ -114,10 +168,12 @@ const getApprovedUninvoicedBookings = asyncHandler(async (req, res) => {
   const bookings = await prisma.booking.findMany({
     where: {
       status: 'APPROVED',
+      ownerId: req.user.id,
       invoice: null
     },
     include: {
       customer: { select: { id: true, name: true, email: true } },
+      owner: { select: { id: true, name: true, email: true, ownerVerified: true, companyName: true } },
       driver: { select: { id: true, name: true, email: true } },
       approvedByOwner: {
         select: { id: true, name: true, email: true, ownerVerified: true, companyName: true }
@@ -139,9 +195,9 @@ const updateBookingStatus = asyncHandler(async (req, res) => {
     throw new Error('Invalid booking ID.');
   }
 
-  if (!status || !['APPROVED', 'REJECTED'].includes(status)) {
+  if (!status || !['PENDING', 'APPROVED', 'REJECTED'].includes(status)) {
     res.status(400);
-    throw new Error('Status must be either APPROVED or REJECTED.');
+    throw new Error('Status must be PENDING, APPROVED, or REJECTED.');
   }
 
   const booking = await prisma.booking.findUnique({
@@ -154,6 +210,29 @@ const updateBookingStatus = asyncHandler(async (req, res) => {
   if (!booking) {
     res.status(404);
     throw new Error('Booking not found.');
+  }
+
+  if (booking.ownerId !== req.user.id) {
+    res.status(403);
+    throw new Error('You can only manage bookings assigned to your owner account.');
+  }
+
+  if (status === booking.status) {
+    res.status(200).json({
+      message: `Booking is already ${status.toLowerCase()}.`,
+      booking
+    });
+    return;
+  }
+
+  if (status === 'PENDING' && booking.invoice) {
+    res.status(400);
+    throw new Error('Cannot revert booking to pending after invoice generation.');
+  }
+
+  if (status === 'REJECTED' && booking.invoice) {
+    res.status(400);
+    throw new Error('Cannot reject booking after invoice generation.');
   }
 
   let finalDriverId = null;
@@ -194,6 +273,7 @@ const updateBookingStatus = asyncHandler(async (req, res) => {
     },
     include: {
       customer: { select: { id: true, name: true, email: true } },
+      owner: { select: { id: true, name: true, email: true, ownerVerified: true, companyName: true } },
       driver: { select: { id: true, name: true, email: true } },
       approvedByOwner: {
         select: { id: true, name: true, email: true, ownerVerified: true, companyName: true }
@@ -204,7 +284,10 @@ const updateBookingStatus = asyncHandler(async (req, res) => {
   });
 
   res.status(200).json({
-    message: `Booking ${status.toLowerCase()} successfully.`,
+    message:
+      status === 'PENDING'
+        ? 'Booking moved back to pending successfully.'
+        : `Booking ${status.toLowerCase()} successfully.`,
     booking: updatedBooking
   });
 });
@@ -233,6 +316,7 @@ module.exports = {
   createBooking,
   getMyBookings,
   getPendingBookings,
+  getReversibleBookings,
   getApprovedUninvoicedBookings,
   updateBookingStatus,
   getAssignedTrips

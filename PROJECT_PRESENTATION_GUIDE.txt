@@ -1,0 +1,648 @@
+SMART TRANSPORT MANAGEMENT SYSTEM (STMS)
+PROJECT PRESENTATION GUIDE
+
+Prepared from the current repository state in:
+D:\Projetcs\STMS_FullStack
+
+Date:
+March 16, 2026
+
+====================================================================
+1. PROJECT OVERVIEW
+====================================================================
+
+STMS is a full-stack, role-based transport booking platform.
+
+It is designed to digitize the complete transport workflow:
+
+Customer -> Booking Request -> Owner Review -> Driver Assignment ->
+Invoice Generation -> Payment -> Trip Visibility
+
+This project replaces manual coordination with a structured system where
+different users have different responsibilities and access levels.
+
+Main user roles:
+- CUSTOMER
+- OWNER
+- DRIVER
+- ADMIN
+
+Main value of the project:
+- centralized booking management
+- owner-specific booking visibility
+- invoice and payment tracking
+- verified owner trust system
+- multi-stop delivery support
+- customer support handling
+
+====================================================================
+2. PROBLEM STATEMENT
+====================================================================
+
+Transport workflows are often handled manually using calls, chats, or
+spreadsheets. That creates problems such as:
+
+1. booking requests are difficult to track
+2. multiple owners may receive the same request incorrectly
+3. driver assignment is not organized
+4. invoice generation is delayed or manual
+5. customers lack payment transparency
+6. support issues are unmanaged
+7. there is no easy way to identify verified transport owners
+
+STMS solves these issues through a single digital workflow platform.
+
+====================================================================
+3. PROJECT OBJECTIVES
+====================================================================
+
+1. Build a complete full-stack booking management system
+2. Implement authentication and role-based authorization
+3. Support real transport workflow from booking to payment
+4. Ensure owner-specific booking visibility
+5. Add advanced features beyond basic CRUD
+6. Keep the architecture modular and understandable
+
+====================================================================
+4. TECH STACK
+====================================================================
+
+Frontend:
+- React 18
+- Vite
+- React Router
+- Axios
+- Plain CSS
+
+Backend:
+- Node.js
+- Express
+- JWT
+- bcrypt
+- Prisma ORM
+- dotenv
+- cors
+
+Database:
+- PostgreSQL
+
+Project tooling:
+- npm workspaces
+- Docker Compose
+- npm-run-all
+- wait-on
+
+====================================================================
+5. SYSTEM ARCHITECTURE
+====================================================================
+
+High-level architecture:
+
+Browser
+  ->
+React frontend
+  ->
+Axios API calls
+  ->
+Express backend
+  ->
+Auth and role middleware
+  ->
+Prisma Client
+  ->
+PostgreSQL database
+
+Frontend responsibilities:
+- pages and dashboards
+- authentication state
+- role-based navigation
+- form handling
+- API communication
+- invoice PDF download
+
+Backend responsibilities:
+- authentication
+- booking logic
+- owner scoping
+- invoice generation
+- payment recording
+- support queries
+- owner verification
+- admin workflows
+
+====================================================================
+6. USER ROLES AND RESPONSIBILITIES
+====================================================================
+
+CUSTOMER:
+- sign up and log in
+- create bookings
+- select a specific owner while booking
+- add optional intermediate delivery stops
+- view booking history
+- view invoices
+- download invoice PDF with QR
+- pay invoices
+- submit support queries
+
+OWNER:
+- see only bookings assigned to them
+- approve or reject bookings
+- assign drivers
+- reverse non-invoiced decisions if needed
+- generate invoices
+- request owner verification
+
+DRIVER:
+- view assigned approved trips
+- see pickup, stops, and final destination
+
+ADMIN:
+- review owner verification requests
+- approve owner verification
+- review customer support queries
+- update support query status
+
+====================================================================
+7. MAIN BUSINESS FLOW
+====================================================================
+
+1. User registers or logs in
+2. Customer creates a booking
+3. Customer selects a specific owner
+4. Booking is stored with customerId and ownerId
+5. Only the assigned owner sees that booking
+6. Owner approves or rejects it
+7. Driver is assigned on approval
+8. Owner generates invoice
+9. Customer views and downloads invoice
+10. Customer pays invoice
+11. Driver sees assigned approved trip
+12. Admin manages verification and support if needed
+
+====================================================================
+8. KEY FEATURES
+====================================================================
+
+Core platform features:
+- registration and login
+- JWT-based authentication
+- role-based dashboards
+- protected routes
+- booking creation
+- booking approval and rejection
+- driver assignment
+- invoice generation
+- payment simulation
+
+Advanced features:
+- owner-specific booking isolation
+- owner verification system
+- multi-stop delivery support
+- support query system
+- invoice PDF download
+- unique QR token on invoice
+- reversible owner decisions before invoice creation
+
+====================================================================
+9. FRONTEND STRUCTURE
+====================================================================
+
+Important frontend pages:
+
+Authentication:
+- LoginPage.jsx
+- SignupPage.jsx
+
+Customer:
+- CustomerDashboard.jsx
+- BookingFormPage.jsx
+- InvoicePage.jsx
+- PaymentPage.jsx
+- SupportPage.jsx
+
+Owner:
+- OwnerDashboard.jsx
+- PendingBookingsPage.jsx
+- InvoicePage.jsx
+- OwnerVerificationPage.jsx
+
+Driver:
+- DriverDashboard.jsx
+
+Admin:
+- AdminVerificationPage.jsx
+- AdminSupportPage.jsx
+
+Frontend architecture details:
+- AuthContext stores user and token in localStorage
+- roleHomePath redirects users to the correct dashboard
+- Axios attaches Bearer token automatically
+- development API calls can use local Vite proxy
+
+====================================================================
+10. BACKEND STRUCTURE
+====================================================================
+
+Main controllers:
+- authController.js
+- bookingController.js
+- invoiceController.js
+- paymentController.js
+- ownerController.js
+- adminController.js
+- supportController.js
+- userController.js
+
+Main route groups:
+- /api/auth
+- /api/bookings
+- /api/invoices
+- /api/payments
+- /api/users
+- /api/owners
+- /api/admin
+- /api/support
+
+Health endpoint:
+- GET /api/health
+
+====================================================================
+11. DATABASE DESIGN
+====================================================================
+
+Main models:
+- User
+- Booking
+- Invoice
+- Payment
+- DeliveryStop
+- SupportQuery
+
+Enums:
+- Role: CUSTOMER, OWNER, DRIVER, ADMIN
+- BookingStatus: PENDING, APPROVED, REJECTED
+- InvoiceStatus: PENDING, PAID
+- SupportQueryStatus: OPEN, IN_PROGRESS, RESOLVED
+
+Important User fields:
+- id
+- name
+- email
+- passwordHash
+- role
+- ownerVerified
+- companyName
+- companyLicenseNumber
+- companyAddress
+- verificationRequestedAt
+
+Important Booking fields:
+- id
+- customerId
+- ownerId
+- driverId
+- approvedByOwnerId
+- pickupLocation
+- dropLocation
+- goodsType
+- vehicleType
+- distanceKm
+- status
+
+Important Invoice fields:
+- id
+- bookingId
+- customerId
+- qrCode
+- distanceKm
+- ratePerKm
+- totalAmount
+- status
+
+Important DeliveryStop fields:
+- bookingId
+- stopOrder
+- location
+- notes
+
+Important SupportQuery fields:
+- customerId
+- subject
+- message
+- status
+- createdAt
+
+====================================================================
+12. OWNER-SPECIFIC BOOKING ISOLATION
+====================================================================
+
+This is one of the most important architectural improvements.
+
+Earlier risk:
+- the same booking could appear to multiple owners
+
+Current solution:
+- booking creation requires ownerId
+- booking record stores ownerId
+- owner queries filter by ownerId = req.user.id
+- owner status updates are blocked if booking belongs to another owner
+- invoice generation is blocked if booking belongs to another owner
+
+Business result:
+- one owner cannot view or manage another owner's bookings
+- backend enforces data isolation securely
+
+====================================================================
+13. OWNER VERIFICATION SYSTEM
+====================================================================
+
+Purpose:
+- help customers identify genuine transport owners
+
+Workflow:
+1. owner submits company details
+2. system stores verification request
+3. admin reviews request
+4. admin approves verification
+5. customer-facing UI can show verified owner badge
+
+Fields used:
+- companyName
+- companyLicenseNumber
+- companyAddress
+- verificationRequestedAt
+- ownerVerified
+
+====================================================================
+14. MULTI-STOP DELIVERY FEATURE
+====================================================================
+
+Purpose:
+- support realistic transport routes with intermediate destinations
+
+Example route:
+Pickup -> Stop 1 -> Stop 2 -> Final Drop
+
+Implementation:
+- frontend allows dynamic stop addition
+- backend validates stop array
+- database stores each stop with stopOrder
+- route chain is shown in booking and trip views
+
+====================================================================
+15. SUPPORT QUERY SYSTEM
+====================================================================
+
+Purpose:
+- give customers a direct communication channel to admin
+
+Customer can:
+- create support query
+- view own submitted queries
+
+Admin can:
+- see all support queries
+- change status to OPEN, IN_PROGRESS, or RESOLVED
+
+Why it matters:
+- adds real product completeness
+- improves issue handling beyond booking flow
+
+====================================================================
+16. INVOICE PDF AND QR FEATURE
+====================================================================
+
+Purpose:
+- generate a presentation-ready invoice document for customers
+
+PDF includes:
+- invoice number
+- issue date
+- status
+- customer details
+- route details
+- multi-stop route details
+- rate per km
+- total amount
+- owner information
+- verified owner label where applicable
+- unique QR image and token
+
+Why QR is useful:
+- creates unique invoice identity
+- can be reused later for validation or scanning
+
+====================================================================
+17. REVERSIBLE DECISION FEATURE
+====================================================================
+
+Purpose:
+- allow owners to recover from accidental approval or rejection
+
+Current behavior:
+- owner can move non-invoiced bookings back to PENDING
+- reverse action is blocked after invoice generation
+
+This improves usability without compromising invoice integrity.
+
+====================================================================
+18. AUTHENTICATION AND SECURITY
+====================================================================
+
+Security design includes:
+
+1. password hashing with bcrypt
+2. JWT token generation
+3. Authorization: Bearer token flow
+4. role-based middleware
+5. owner-specific backend data filtering
+6. customer-specific invoice payment checks
+7. API-level validation
+8. CORS handling
+
+Important principle:
+- frontend can hide actions, but backend must enforce permissions
+
+====================================================================
+19. MAIN API ENDPOINTS
+====================================================================
+
+Authentication:
+- POST /api/auth/register
+- POST /api/auth/login
+
+Bookings:
+- POST /api/bookings
+- GET /api/bookings/my
+- GET /api/bookings/pending
+- GET /api/bookings/reversible
+- GET /api/bookings/approved-uninvoiced
+- GET /api/bookings/assigned
+- PATCH /api/bookings/:id/status
+
+Invoices:
+- POST /api/invoices/generate
+- GET /api/invoices/my
+- GET /api/invoices/owner
+
+Payments:
+- POST /api/payments/pay
+
+Owner verification:
+- POST /api/owners/request-verification
+- GET /api/owners/my-verification
+
+Admin:
+- GET /api/admin/verification-requests
+- PATCH /api/admin/verify-owner/:ownerId
+- GET /api/admin/support-queries
+- PATCH /api/admin/support/:id/status
+
+Support:
+- POST /api/support/query
+- GET /api/support/my-queries
+
+User lists:
+- GET /api/users/drivers
+- GET /api/users/owners
+
+====================================================================
+20. PROJECT SETUP
+====================================================================
+
+Intended local setup:
+
+1. npm install
+2. npm run dev
+
+Designed runtime:
+- PostgreSQL on localhost:5432
+- Backend on http://localhost:5000
+- Frontend on http://localhost:5173
+
+Project automation scripts do the following:
+- check Docker prerequisites
+- prepare .env files
+- start PostgreSQL through Docker Compose
+- wait for DB readiness
+- push Prisma schema
+- start backend and frontend dev servers
+
+====================================================================
+21. DEMO FLOW FOR PRESENTATION
+====================================================================
+
+Recommended demo sequence:
+
+1. Show signup/login
+2. Log in as customer
+3. Create booking and select an owner
+4. Show that only the selected owner can see that booking
+5. Log in as owner
+6. Approve booking and assign driver
+7. Optionally show reverse-decision feature
+8. Generate invoice
+9. Log in as customer
+10. Show invoice list and download PDF
+11. Pay invoice
+12. Log in as driver and show assigned trip
+13. Log in as admin and show owner verification and support pages
+
+====================================================================
+22. CHALLENGES YOU CAN MENTION
+====================================================================
+
+Realistic challenges in this project:
+
+1. managing multiple user roles correctly
+2. keeping authentication flow stable
+3. preventing booking leakage between owners
+4. supporting multi-stop booking cleanly
+5. enforcing secure invoice and payment rules
+6. generating PDF with QR in frontend
+7. keeping the architecture modular while extending features
+
+====================================================================
+23. CURRENT LIMITATIONS
+====================================================================
+
+1. payment is simulated, not a real gateway
+2. no automated test suite yet
+3. no real-time notifications
+4. no live map tracking
+5. no document upload for verification yet
+6. analytics and reporting are still basic
+
+====================================================================
+24. FUTURE ENHANCEMENTS
+====================================================================
+
+Possible next improvements:
+
+1. real payment gateway integration
+2. email or SMS notifications
+3. live GPS tracking
+4. verification document upload
+5. advanced analytics dashboard
+6. cancellation and refund flow
+7. audit logs
+8. automated unit and E2E tests
+9. QR scan validation workflow
+
+====================================================================
+25. STRONG POINTS FOR PRESENTATION
+====================================================================
+
+Why this project is strong academically and technically:
+
+1. full-stack architecture
+2. real business workflow
+3. multiple user roles
+4. authentication and authorization
+5. relational database design
+6. modular backend
+7. useful advanced features beyond CRUD
+8. clear demonstration output through dashboards and invoices
+
+====================================================================
+26. QUESTIONS YOU MAY BE ASKED
+====================================================================
+
+Q. Why did you use Prisma?
+A. It simplifies schema definition, relationships, and database access.
+
+Q. How do you stop owners from seeing other owners' bookings?
+A. Each booking stores ownerId, and owner APIs filter by req.user.id on
+the backend.
+
+Q. Why did you add owner verification?
+A. To build customer trust in a multi-owner transport platform.
+
+Q. Why is multi-stop delivery important?
+A. Real transport routes often include intermediate destinations.
+
+Q. Why add QR to invoice?
+A. To create a unique machine-readable invoice identity for future use.
+
+====================================================================
+27. SHORT CONCLUSION
+====================================================================
+
+STMS is a complete role-based transport workflow application that
+connects customers, owners, drivers, and admins in one platform.
+
+It demonstrates:
+- full-stack development
+- secure role-based access
+- owner-specific data isolation
+- real booking to payment workflow
+- extensible product thinking
+
+Speaking conclusion:
+
+"Smart Transport Management System is a practical full-stack platform
+that digitizes booking, approval, driver assignment, invoicing,
+payment, verification, and support in one structured workflow."
+
+END OF DOCUMENT
