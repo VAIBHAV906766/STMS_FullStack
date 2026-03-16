@@ -16,6 +16,47 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
+    networks:
+      - stms_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stms_backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/stms_db?schema=public"
+      JWT_SECRET: ${JWT_SECRET:-change_this_to_a_secure_secret}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - stms_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: stms_frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:5000/api}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - stms_network
 
 volumes:
   stms_pg_data:
+
+networks:
+  stms_network:
+    driver: bridge
